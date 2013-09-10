@@ -25,16 +25,15 @@ FormRude (body)->set User-Agent Google-chrome
 
 
 FormRude (|headers|body)->send
-FormRude ->reset
-FormRude ->send 10 >> default 1
-FormRude ->back  >> back on step
-FormRude ->
+FormRude ->send 10  # send the post N times. default 1 time
+FormRude ->back     # back one step
+FormRude ->reset    # Reset all values to the original values
+FormRude ->exit
 
 ------------------------------------
 variable should be able to be filled from list file
 f = File.read "name.list"
 names = f.squeeze("\n").split.uniq
-
 
 
 =end
