@@ -152,6 +152,7 @@ def main(post_file)
     #puts "\n\n------Post-------\n\n"
     #pp parse.post
     #Readline.completion_proc = proc { |input| current_context.completions(input) }
+    command.strip!
     current_context = execute_command(command.strip, current_context)
   end
 end
@@ -161,21 +162,24 @@ def execute_command(command, current_context)
     when /^help$/
       commands =
           {
-              'help'    => 'Help menu - Show This screen',
+              'help' => 'Help menu - Show This screen',
               'show' => 'Displays modules of a given type, or all modules',
               'use'  => 'Selects a module by name',
-              'set' =>  'Set a value for current variable',
+              'set'  =>  'Set a value for current variable',
+              'send' =>  'Send the post number of times - default 1 time',
               'exit' => 'Exit the console'
           }
       puts "\nHelp menu"
       puts '=' * 'Help menu'.length + "\n\n"
       puts "Command \t\t Description"
       puts '-' * 'Command'.length + " \t\t " + '-' * 'Description'.length
-      commands.each {|key| puts "#{key} \t\t #{commands[key]}"}
+      commands.each {|cmd| puts "#{cmd[0]} \t\t #{cmd[1]}"}
       puts "\n\n"
     when /^back$/
       back
       puts "back one step"
+    when /^send .*/
+      puts "send , default 1 time"
   end
 end
 
