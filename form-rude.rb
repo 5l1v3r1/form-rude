@@ -98,7 +98,7 @@ end # HTTP
 #
 # A navigator stack to guide user console
 #
-class Context
+class Context  # Operator Class
 
   attr_reader :current_context, :parent_context
 
@@ -107,11 +107,50 @@ class Context
     @parent_context  = parent_context
   end
 
-
-  def completions(input)
-    self.split(/\s+/).grep(/^#{input}/)
+  #
+  # Tab completion array creator/builder: Will check the type of here and transform it into the list of keys to which the user can cd
+  #
+  def current_context_to_array
+    case
+      when self.current_context.kind_of?(Array)
+        self.current_context.map { |item| item.keys }.join(' ') # TODO to be tested with join "\n"
+      when self.current_context.kindof(Hash)
+        self.current_context.keys.join(' ')
+      else
+        self.current_context.current_context_to_array
+    end
   end
 
+end # Context
+
+class Commands
+
+  def initialize(context)
+
+    @context = context
+
+  end
+
+  def use
+
+  end
+
+  def show
+
+  end
+
+  def set
+
+  end
+
+  def send(times = 1)
+
+  end
+
+
+  def run_command(cmd)
+
+  end
 end
 
 
@@ -119,21 +158,23 @@ def main(post_file)
   file = File.read(post_file)
   parse = HTTP::PostParser.new(file)
 
+  context = Context.new(parse,nil)
+
   command = ""
 
   while command != 'exit'
     Readline.readline('FormRude ->', true)
 
+    #Readline.completion_proc = proc { |input| current_context.completions(input) }
 
-    puts "\n\n------Header--------\n\n"
-    puts parse.headers
-    puts "\n\n------Body-------\n\n"
-    puts parse.body
-    puts "\n\n------Parse-------\n\n"
-    pp parse.parse[:headers]
+    #puts "\n\n------Header--------\n\n"
+    #puts parse.headers
+    #puts "\n\n------Body-------\n\n"
+    #puts parse.body
+    #puts "\n\n------Parse-------\n\n"
+    #p parse.parse[:headers]
     #puts "\n\n------Post-------\n\n"
     #pp parse.post
-    #Readline.completion_proc = proc { |input| current_context.completions(input) }
   end
 end
 
