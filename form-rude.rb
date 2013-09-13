@@ -235,6 +235,9 @@ class Commands
     if self.respond_to?("cmd_#{command.first}")
 
       send("cmd_#{command.first}", command.last)
+      puts self
+    elsif command.empty? or command.nil?
+      # Do Nothing!
     else
       puts "Unkown command!"
     end
@@ -251,18 +254,28 @@ def main(post_file)
   # TODO Show file summary
   # File name , total number of headers, values
 
+  # File summary
+  puts "[+] ".green + "File Summary".white
+  puts "- ".dark_green + "Post file name: " + "#{post_file.split('/').last}".bold
+  puts "- ".dark_green + "Number of headers: " + "#{parse.headers.length}".bold   + " headers"
+  puts "- ".dark_green + "Number of variables: " + "#{parse.body.length}".bold    + " variables"
+  puts "\n\n"
+
   command = ""
 
   while true
+
     command =  Readline.readline('FormRude ->', true)
 
     @commands.run_command(command)
     #Readline.completion_proc = proc { |input| current_context.completions(input) }
 
-    #puts "\n\n------Header--------\n\n"
+    #puts "\n\n------Headers-------\n\n"
     #puts parse.headers
+    #puts parse.headers.length
     #puts "\n\n------Body-------\n\n"
     #puts parse.body
+    #puts parse.body.length
     #puts "\n\n------Parse-------\n\n"
     #p parse.parse[:headers]
     #puts "\n\n------Post-------\n\n"
