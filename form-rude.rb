@@ -36,6 +36,26 @@ names = f.squeeze("\n").split.uniq
 
 =end
 
+#
+# colors
+#
+class String
+  def red; colorize(self, "\e[1m\e[31m"); end
+  def light_red; colorize(self, "\e[1m\e[91m"); end
+  def green; colorize(self, "\e[1m\e[32m"); end
+  def dark_green; colorize(self, "\e[32m"); end
+  def yellow; colorize(self, "\e[1m\e[33m"); end
+  def blue; colorize(self, "\e[1m\e[34m"); end
+  def dark_blue; colorize(self, "\e[34m"); end
+  def pur; colorize(self, "\e[1m\e[35m"); end
+  def bold; colorize(self, "\e[1m"); end
+  def underline; colorize(self, "\e[4m"); end
+  def blink; colorize(self, "\e[5m"); end
+  def light_cyan; colorize(self, "\e[1m\e[36m"); end
+  def cyan; colorize(self, "\e[0;36;49mSS"); end
+  def white; colorize(self, "\e[1m\e[97m"); end
+  def colorize(text, color_code)  "#{color_code}#{text}\e[0m" end
+end
 
 
 
@@ -47,7 +67,7 @@ module HTTP
 
     def initialize(post)
       @post  = post.dup
-      @parse = {:headers => headers , :body => body}
+      @parse = [:headers => headers , :body => body , :full_post => [headers, body]]
     end
 
     #
@@ -100,7 +120,8 @@ end # HTTP
 #
 class Context  # Operator Class
 
-  attr_reader :current_context, :parent_context
+  attr_accessor :current_context
+  attr_reader   :parent_context
 
   def initialize(current_context , parent_context)
     @current_context = current_context
@@ -111,10 +132,11 @@ class Context  # Operator Class
   # Tab completion array creator/builder: Will check the type of here and transform it into the list of keys to which the user can cd
   #
   def current_context_to_array
+    #p self.current_context
     case
       when self.current_context.kind_of?(Array)
         self.current_context.map { |item| item.keys }.join(' ') # TODO to be tested with join "\n"
-      when self.current_context.kindof(Hash)
+      when self.current_context.kindof?(Hash)
         self.current_context.keys.join(' ')
       else
         self.current_context.current_context_to_array
@@ -126,30 +148,96 @@ end # Context
 class Commands
 
   def initialize(context)
-
-    @context = context
-
-  end
-
-  def use
-
-  end
-
-  def show
-
-  end
-
-  def set
-
-  end
-
-  def send(times = 1)
-
+    @context = Context.new(context.parse, nil)
   end
 
 
-  def run_command(cmd)
+  # TODO use table view
+  def cmd_show(value)
+    value = nil if value == "show"
 
+    case
+      when value == "headers"
+        puts "[+] " + "Header Contents"
+        puts "-" * "[+] Body Contents".length
+
+        @context.current_context[0][:headers].map do |hash|
+          hash.each do |_key , _val|
+            puts "#{_key}".green + ":\n" + "#{_val}".white
+          end
+        end
+
+      when value == "body"
+        puts "[+] " + "Body Contents"
+        puts "-" * "[+] Body Contents".length
+
+        @context.current_context[0][:body].map do |hash|
+          hash.each do |_key , _val|
+            puts "#{_key}".green + ":\n" + "#{_val}".white
+          end
+        end
+      when value == "full_post"
+        puts "[+] " + "Body Contents"
+        puts "-" * "[+] Body Contents".length
+
+        @context.current_context[0][:full_post].map do |element|
+          element.map do |hash|
+            hash.each do |_key , _val|
+              puts "#{_key}".green + ":\t\t\t" + "#{_val}".white
+            end
+          end
+        end
+
+      else
+        pp @context.current_context
+    end
+
+  end
+
+  def cmd_use(value)
+    puts "[!] Missing arguament!" if value == "use"
+    value = nil if value == "use"
+
+    new_context = @context.current_context
+
+  end
+
+  def cmd_set
+
+  end
+
+  def cmd_send(times = 1)
+    times = times.to_i
+    times.to_i.times do
+      puts "send post #{times}"
+    end
+  end
+
+  def cmd_back
+    @context.parent_context
+  end
+
+  def cmd_exit(value = nil)
+    exit
+  end
+
+  def current_active_context
+    @context.current_context
+  end
+
+  def is_command?(command)
+    self.respond_to?("cmd_#{command.first}")
+  end
+
+  def run_command(command)
+    command =  command.split
+
+    if self.respond_to?("cmd_#{command.first}")
+
+      send("cmd_#{command.first}", command.last)
+    else
+      puts "Unkown command!"
+    end
   end
 end
 
@@ -157,14 +245,18 @@ end
 def main(post_file)
   file = File.read(post_file)
   parse = HTTP::PostParser.new(file)
+  context = parse
+  @commands = Commands.new(context)
 
-  context = Context.new(parse,nil)
+  # TODO Show file summary
+  # File name , total number of headers, values
 
   command = ""
 
-  while command != 'exit'
-    Readline.readline('FormRude ->', true)
+  while true
+    command =  Readline.readline('FormRude ->', true)
 
+    @commands.run_command(command)
     #Readline.completion_proc = proc { |input| current_context.completions(input) }
 
     #puts "\n\n------Header--------\n\n"
