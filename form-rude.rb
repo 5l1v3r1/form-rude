@@ -3,6 +3,7 @@
 require 'readline'
 require 'mechanize'
 require 'pp'
+require 'terminal-table'
 
 =begin
 
@@ -121,7 +122,7 @@ end # HTTP
 class Context  # Operator Class
 
   attr_accessor :current_context
-  attr_reader   :parent_context
+  attr_accessor :parent_context
 
   def initialize(current_context , parent_context)
     @current_context = current_context
@@ -129,10 +130,25 @@ class Context  # Operator Class
   end
 
   #
+  #
+  #
+  def chance_context(context = nil)
+      if context == "back"
+        self.parent_context
+      elsif self.current_context.kind_of?(Array)
+        pp current_context[0].keys
+        self.parent_context = self.current_context[0].keys
+        self.current_context[0][context.to_sym]
+      elsif self.current_context.kind_of?(Hash)
+        self.current_context.keys
+      end
+  end
+
+
+  #
   # Tab completion array creator/builder: Will check the type of here and transform it into the list of keys to which the user can cd
   #
   def current_context_to_array
-    #p self.current_context
     case
       when self.current_context.kind_of?(Array)
         self.current_context.map { |item| item.keys }.join(' ') # TODO to be tested with join "\n"
@@ -152,54 +168,71 @@ class Commands
   end
 
 
-  # TODO use table view
+  #
+  # Show the contents
+  #
   def cmd_show(value)
     value = nil if value == "show"
 
     case
       when value == "headers"
-        puts "[+] " + "Header Contents"
-        puts "-" * "[+] Body Contents".length
-
+        hrows = []
         @context.current_context[0][:headers].map do |hash|
           hash.each do |_key , _val|
-            puts "#{_key}".green + ":\n" + "#{_val}".white
+            _val = _val.scan(/.{100}/).join("\n") if _val.size > 150    # This line To fix table layout
+
+            hrows << ["#{_key}".green , "#{_val}".white]
+            hrows << :separator
           end
         end
+        puts htable = Terminal::Table.new(:title => "Headers".bold.underline, :headings => ["Header".bold, "Value".bold], :rows => hrows)
 
       when value == "body"
-        puts "[+] " + "Body Contents"
-        puts "-" * "[+] Body Contents".length
+        brows = []
+        @context.current_context[0][:body].map do |hash|
+          hash.each do |_key , _val|
+            _val = _val.scan(/.{100}/).join("\n") if _val.size > 150    # This line To fix table layout
+
+            brows << ["#{_key}".green, "#{_val}".white]
+            brows << :separator
+          end
+        end
+        puts btable = Terminal::Table.new(:title => "Body".bold.underline, :headings => ["Variable".bold, "Value".bold], :rows => brows)
+
+      when value == "full_post"
+        frows = []
+        @context.current_context[0][:headers].map do |hash|
+          hash.each do |_key , _val|
+            _val = _val.scan(/.{100}/).join("\n") if _val.size > 150    # This line To fix table layout
+
+            frows << ["#{_key}".green , "#{_val}".white]
+            frows << :separator
+          end
+        end
 
         @context.current_context[0][:body].map do |hash|
           hash.each do |_key , _val|
-            puts "#{_key}".green + ":\n" + "#{_val}".white
+            _val = _val.scan(/.{100}/).join("\n") if _val.size > 150    # This line To fix table layout
+
+            frows << ["#{_key}".green, "#{_val}".white]
+            frows << :separator
           end
         end
-      when value == "full_post"
-        puts "[+] " + "Body Contents"
-        puts "-" * "[+] Body Contents".length
-
-        @context.current_context[0][:full_post].map do |element|
-          element.map do |hash|
-            hash.each do |_key , _val|
-              puts "#{_key}".green + ":\t\t\t" + "#{_val}".white
-            end
-          end
-        end
-
+        puts htable = Terminal::Table.new(:title => "Full post".bold.underline, :headings => ["Value".bold, "Value".bold], :rows => frows)
       else
         pp @context.current_context
     end
 
   end
 
+  #
+  # cd
+  #
   def cmd_use(value)
     puts "[!] Missing arguament!" if value == "use"
     value = nil if value == "use"
-
-    new_context = @context.current_context
-
+     new_context = @context.chance_context(value).map {|key| key.keys[0]}
+     @context.current_context =  new_context
   end
 
   def cmd_set
@@ -213,8 +246,9 @@ class Commands
     end
   end
 
-  def cmd_back
-    @context.parent_context
+  def cmd_back(cmd)
+    @context.current_context = @context.parent_context
+    #@context.parent_context
   end
 
   def cmd_exit(value = nil)
@@ -222,7 +256,7 @@ class Commands
   end
 
   def current_active_context
-    @context.current_context
+    @context.current_context_to_array
   end
 
   def is_command?(command)
@@ -233,16 +267,17 @@ class Commands
     command =  command.split
 
     if self.respond_to?("cmd_#{command.first}")
-
       send("cmd_#{command.first}", command.last)
-      puts self
     elsif command.empty? or command.nil?
       # Do Nothing!
     else
       puts "Unkown command!"
     end
+    #pp @context.current_context
   end
-end
+
+
+end # Commands
 
 
 def main(post_file)
@@ -251,8 +286,6 @@ def main(post_file)
   context = parse
   @commands = Commands.new(context)
 
-  # TODO Show file summary
-  # File name , total number of headers, values
 
   # File summary
   puts "[+] ".green + "File Summary".white
@@ -268,13 +301,12 @@ def main(post_file)
     command =  Readline.readline('FormRude ->', true)
 
     @commands.run_command(command)
-    #Readline.completion_proc = proc { |input| current_context.completions(input) }
 
-    #puts "\n\n------Headers-------\n\n"
-    #puts parse.headers
-    #puts parse.headers.length
-    #puts "\n\n------Body-------\n\n"
-    #puts parse.body
+    puts "\n\n------Headers-------\n\n"
+    puts parse.headers
+    puts parse.headers.length
+    puts "\n\n------Body-------\n\n"
+    puts parse.body
     #puts parse.body.length
     #puts "\n\n------Parse-------\n\n"
     #p parse.parse[:headers]
